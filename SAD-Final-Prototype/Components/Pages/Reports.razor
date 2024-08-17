@@ -1,5 +1,3 @@
-@* Work in progress... *@
-
 @page "/reports"
 @using SAD_Final_Prototype.ViewModels
 @using SAD_Final_Prototype.Models
@@ -7,13 +5,15 @@
 
 <h3>Reports</h3>
 
-<!-- Sales by Date -->
+Work in progress...
+
+@*
 <h4>Sales by Date</h4>
 <input type="date" @bind="startDate" />
 <input type="date" @bind="endDate" />
 <button @onclick="GenerateSalesByDateReport">Generate Report</button>
 
-@if (salesByDateReport != null)
+@if (salesByDateReport != null && salesByDateReport.Any())
 {
     <ul>
         @foreach (var sale in salesByDateReport)
@@ -22,8 +22,11 @@
         }
     </ul>
 }
+else
+{
+    <p>No sales found for the selected date range.</p>
+}
 
-<!-- Sales by Customer -->
 <h4>Sales by Customer</h4>
 <select @bind="selectedCustomerId">
     @foreach (var customer in customers)
@@ -33,7 +36,7 @@
 </select>
 <button @onclick="GenerateSalesByCustomerReport">Generate Report</button>
 
-@if (salesByCustomerReport != null)
+@if (salesByCustomerReport != null && salesByCustomerReport.Any())
 {
     <ul>
         @foreach (var sale in salesByCustomerReport)
@@ -41,6 +44,10 @@
             <li>@sale.EquipmentName rented on @sale.RentalDate for @sale.TotalCost</li>
         }
     </ul>
+}
+else
+{
+    <p>No sales found for the selected customer.</p>
 }
 
 <!-- List Items by Category -->
@@ -53,92 +60,65 @@
 </select>
 <button @onclick="GenerateItemsByCategoryReport">Generate Report</button>
 
-@if (itemsByCategoryReport != null)
+@if (itemsByCategoryReport != null && itemsByCategoryReport.Any())
 {
     <ul>
         @foreach (var item in itemsByCategoryReport)
         {
-            <li>@item.Name - @item.Description - @item.DailyRentalCost</li>
+            <li>@item.Name - @item.Description - @item.DailyRentalCost.ToString("C")</li>
         }
     </ul>
 }
+else
+{
+    <p>No items found for the selected category.</p>
+}
 
 @code {
-    private DateTime startDate;
-    private DateTime endDate;
+    private DateTime startDate = DateTime.Now;
+    private DateTime endDate = DateTime.Now;
     private int selectedCustomerId;
     private int selectedCategoryId;
 
-    private List<SaleReportItem> salesByDateReport = new List<SaleReportItem>(); // Initialize the field
-    private List<SaleReportItem> salesByCustomerReport = new List<SaleReportItem>(); // Initialize the field
-    private List<Equipment> itemsByCategoryReport = new List<Equipment>(); // Initialize the field
+    private List<SaleReportItem> salesByDateReport = new List<SaleReportItem>();
+    private List<SaleReportItem> salesByCustomerReport = new List<SaleReportItem>();
+    private List<Equipment> itemsByCategoryReport = new List<Equipment>();
 
-    private List<Customer> customers = new List<Customer>();
-    private List<Category> categories = new List<Category>();
+    private List<Customer> customers = new List<Customer>(); // Define customers list
+    private List<Category> categories = new List<Category>(); // Define categories list
 
     private DatabaseContext _dbContext;
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            _dbContext = new DatabaseContext(); // Initialize DatabaseContext
-
-            // Load customers and categories for dropdowns
-            customers = await LoadCustomersAsync();
-            categories = await LoadCategoriesAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error initializing Reports page: {ex.Message}");
-        }
+        _dbContext = new DatabaseContext();
+        customers = await LoadCustomersAsync();
+        categories = await LoadCategoriesAsync();
     }
 
     private async Task GenerateSalesByDateReport()
     {
-        try
-        {
-            salesByDateReport = await GenerateSalesByDateAsync(startDate, endDate);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error generating sales by date report: {ex.Message}");
-        }
+        salesByDateReport = await GenerateSalesByDateAsync(startDate, endDate);
     }
 
     private async Task GenerateSalesByCustomerReport()
     {
-        try
-        {
-            salesByCustomerReport = await GenerateSalesByCustomerAsync(selectedCustomerId);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error generating sales by customer report: {ex.Message}");
-        }
+        salesByCustomerReport = await GenerateSalesByCustomerAsync(selectedCustomerId);
     }
 
     private async Task GenerateItemsByCategoryReport()
     {
-        try
-        {
-            itemsByCategoryReport = await LoadItemsByCategoryAsync(selectedCategoryId);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error generating items by category report: {ex.Message}");
-        }
+        itemsByCategoryReport = await LoadItemsByCategoryAsync(selectedCategoryId);
     }
 
     private async Task<List<SaleReportItem>> GenerateSalesByDateAsync(DateTime startDate, DateTime endDate)
     {
         var rentals = await _dbContext.GetFileteredAsync<Rental>(r => r.RentalDate >= startDate && r.RentalDate <= endDate);
         var salesReport = from rental in rentals
-                          join customer in customers on rental.CustomerId equals customer.CustomerId
                           join equipment in itemsByCategoryReport on rental.EquipmentId equals equipment.EquipmentId
                           select new SaleReportItem
                           {
-                              CustomerName = customer.FirstName + " " + customer.LastName,
+                              CustomerName = customers.First(c => c.CustomerId == rental.CustomerId).FirstName + " " + customers.First(c => c.CustomerId == rental.CustomerId).LastName,
                               EquipmentName = equipment.Name,
                               RentalDate = rental.RentalDate,
                               TotalCost = rental.RentalCost
@@ -181,9 +161,10 @@
 
     private class SaleReportItem
     {
-        public string CustomerName { get; set; } = string.Empty; // Initialize to avoid warnings
-        public string EquipmentName { get; set; } = string.Empty; // Initialize to avoid warnings
+        public string CustomerName { get; set; } = string.Empty;
+        public string EquipmentName { get; set; } = string.Empty;
         public DateTime RentalDate { get; set; }
         public decimal TotalCost { get; set; }
     }
 }
+*@
