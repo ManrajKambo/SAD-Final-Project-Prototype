@@ -1,0 +1,39 @@
+@page "/categories"
+@using SAD_Final_Prototype.ViewModels
+@using SAD_Final_Prototype.Code
+
+<h3>Categories</h3>
+
+<input placeholder="New Category" @bind="newCategory.Description" />
+<button @onclick="AddCategory">Add Category</button>
+
+<ul>
+    @foreach (var category in CategoryViewModel.Items)
+    {
+        <li>@category.Description <button @onclick="() => RemoveCategory(category)">Remove</button></li>
+    }
+</ul>
+
+@code {
+    private SAD_Final_Prototype.Models.Category newCategory = new SAD_Final_Prototype.Models.Category();
+    private CategoryViewModel CategoryViewModel { get; set; } = new CategoryViewModel(new DatabaseContext());
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CategoryViewModel.LoadItemsAsync();
+    }
+
+    private async Task AddCategory()
+    {
+        if (!string.IsNullOrWhiteSpace(newCategory.Description))
+        {
+            await CategoryViewModel.AddItemAsync(newCategory);
+            newCategory = new SAD_Final_Prototype.Models.Category();
+        }
+    }
+
+    private async Task RemoveCategory(SAD_Final_Prototype.Models.Category category)
+    {
+        await CategoryViewModel.RemoveItemAsync(category);
+    }
+}

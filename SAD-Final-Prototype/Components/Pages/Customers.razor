@@ -1,0 +1,47 @@
+@page "/customers"
+@using SAD_Final_Prototype.ViewModels
+@using SAD_Final_Prototype.Code
+
+<h3>Customers</h3>
+
+<input placeholder="First Name" @bind="newCustomer.FirstName" />
+<input placeholder="Last Name" @bind="newCustomer.LastName" />
+<input placeholder="Contact Phone" @bind="newCustomer.ContactPhone" />
+<input placeholder="Email" @bind="newCustomer.Email" />
+<label>
+    <input type="checkbox" @bind="newCustomer.IsBanned" /> Banned
+</label>
+<button @onclick="AddCustomer">Add Customer</button>
+
+<ul>
+    @foreach (var customer in CustomerViewModel.Items)
+    {
+        <li>@customer.FirstName @customer.LastName - @customer.ContactPhone - @customer.Email - Banned: @customer.IsBanned
+            <button @onclick="() => RemoveCustomer(customer)">Remove</button>
+        </li>
+    }
+</ul>
+
+@code {
+    private SAD_Final_Prototype.Models.Customer newCustomer = new SAD_Final_Prototype.Models.Customer();
+    private CustomerViewModel CustomerViewModel { get; set; } = new CustomerViewModel(new DatabaseContext());
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CustomerViewModel.LoadItemsAsync();
+    }
+
+    private async Task AddCustomer()
+    {
+        if (!string.IsNullOrWhiteSpace(newCustomer.FirstName) && !string.IsNullOrWhiteSpace(newCustomer.LastName))
+        {
+            await CustomerViewModel.AddItemAsync(newCustomer);
+            newCustomer = new SAD_Final_Prototype.Models.Customer();
+        }
+    }
+
+    private async Task RemoveCustomer(SAD_Final_Prototype.Models.Customer customer)
+    {
+        await CustomerViewModel.RemoveItemAsync(customer);
+    }
+}

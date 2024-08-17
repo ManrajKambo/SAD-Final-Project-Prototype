@@ -1,0 +1,53 @@
+@page "/equipment"
+@using SAD_Final_Prototype.ViewModels
+@using SAD_Final_Prototype.Code
+
+<h3>Equipment</h3>
+
+<select @bind="newEquipment.CategoryId">
+    <option value="">Select Category</option>
+    @foreach (var category in CategoryViewModel.Items)
+    {
+        <option value="@category.CategoryId">@category.Description</option>
+    }
+</select>
+
+<input placeholder="Name" @bind="newEquipment.Name" />
+<input placeholder="Description" @bind="newEquipment.Description" />
+<input placeholder="Daily Rental Cost" type="number" step="0.01" @bind="newEquipment.DailyRentalCost" />
+<button @onclick="AddEquipment">Add Equipment</button>
+
+<ul>
+    @foreach (var equipment in EquipmentViewModel.Items)
+    {
+        <li>@equipment.Name - @equipment.Description - @equipment.DailyRentalCost
+            <button @onclick="() => RemoveEquipment(equipment)">Remove</button>
+        </li>
+    }
+</ul>
+
+@code {
+    private SAD_Final_Prototype.Models.Equipment newEquipment = new SAD_Final_Prototype.Models.Equipment();
+    private CategoryViewModel CategoryViewModel { get; set; } = new CategoryViewModel(new DatabaseContext());
+    private EquipmentViewModel EquipmentViewModel { get; set; } = new EquipmentViewModel(new DatabaseContext());
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CategoryViewModel.LoadItemsAsync();
+        await EquipmentViewModel.LoadItemsAsync();
+    }
+
+    private async Task AddEquipment()
+    {
+        if (!string.IsNullOrWhiteSpace(newEquipment.Name))
+        {
+            await EquipmentViewModel.AddItemAsync(newEquipment);
+            newEquipment = new SAD_Final_Prototype.Models.Equipment();
+        }
+    }
+
+    private async Task RemoveEquipment(SAD_Final_Prototype.Models.Equipment equipment)
+    {
+        await EquipmentViewModel.RemoveItemAsync(equipment);
+    }
+}

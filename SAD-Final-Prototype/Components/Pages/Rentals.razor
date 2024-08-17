@@ -1,0 +1,86 @@
+@page "/rentals"
+@using SAD_Final_Prototype.ViewModels
+@using SAD_Final_Prototype.Models
+@using SAD_Final_Prototype.Code
+
+<h3>Rentals</h3>
+
+<select @bind="newRental.CustomerId">
+    <option value="">Select Customer</option>
+    @foreach (var customer in CustomerViewModel.Items)
+    {
+        <option value="@customer.CustomerId">@customer.FirstName @customer.LastName</option>
+    }
+</select>
+
+<select @bind="newRental.EquipmentId">
+    <option value="">Select Equipment</option>
+    @foreach (var equipment in EquipmentViewModel.Items)
+    {
+        <option value="@equipment.EquipmentId">@equipment.Name</option>
+    }
+</select>
+
+<input type="date" @bind="newRental.RentalDate" />
+<input type="date" @bind="newRental.ReturnDate" />
+<button @onclick="AddRental">Add Rental</button>
+
+<ul>
+    @foreach (var rental in RentalViewModel.Items)
+    {
+        <li>@rental.RentalId: @CustomerViewModel.Items.FirstOrDefault(c => c.CustomerId == rental.CustomerId)?.FirstName
+            rented @EquipmentViewModel.Items.FirstOrDefault(e => e.EquipmentId == rental.EquipmentId)?.Name
+            from @rental.RentalDate.ToShortDateString() to @rental.ReturnDate.ToShortDateString()
+            <button @onclick="() => RemoveRental(rental)">Remove</button>
+        </li>
+    }
+</ul>
+
+@code {
+    private Rental newRental = new Rental();
+    private CustomerViewModel CustomerViewModel = new CustomerViewModel(new DatabaseContext());
+    private EquipmentViewModel EquipmentViewModel = new EquipmentViewModel(new DatabaseContext());
+    private RentalViewModel RentalViewModel = new RentalViewModel(new DatabaseContext());
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CustomerViewModel.LoadItemsAsync();
+            await EquipmentViewModel.LoadItemsAsync();
+            await RentalViewModel.LoadItemsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing Rentals page: {ex.Message}");
+        }
+    }
+
+    private async Task AddRental()
+    {
+        try
+        {
+            if (newRental.CustomerId > 0 && newRental.EquipmentId > 0)
+            {
+                await RentalViewModel.AddItemAsync(newRental);
+                newRental = new Rental(); // Reset input
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding rental: {ex.Message}");
+        }
+    }
+
+    private async Task RemoveRental(Rental rental)
+    {
+        try
+        {
+            await RentalViewModel.RemoveItemAsync(rental);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing rental: {ex.Message}");
+        }
+    }
+}

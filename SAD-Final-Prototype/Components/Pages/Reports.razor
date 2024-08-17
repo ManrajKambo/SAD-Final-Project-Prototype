@@ -1,0 +1,189 @@
+@* Work in progress... *@
+
+@page "/reports"
+@using SAD_Final_Prototype.ViewModels
+@using SAD_Final_Prototype.Models
+@using SAD_Final_Prototype.Code
+
+<h3>Reports</h3>
+
+<!-- Sales by Date -->
+<h4>Sales by Date</h4>
+<input type="date" @bind="startDate" />
+<input type="date" @bind="endDate" />
+<button @onclick="GenerateSalesByDateReport">Generate Report</button>
+
+@if (salesByDateReport != null)
+{
+    <ul>
+        @foreach (var sale in salesByDateReport)
+        {
+            <li>@sale.CustomerName rented @sale.EquipmentName on @sale.RentalDate for @sale.TotalCost</li>
+        }
+    </ul>
+}
+
+<!-- Sales by Customer -->
+<h4>Sales by Customer</h4>
+<select @bind="selectedCustomerId">
+    @foreach (var customer in customers)
+    {
+        <option value="@customer.CustomerId">@customer.FirstName @customer.LastName</option>
+    }
+</select>
+<button @onclick="GenerateSalesByCustomerReport">Generate Report</button>
+
+@if (salesByCustomerReport != null)
+{
+    <ul>
+        @foreach (var sale in salesByCustomerReport)
+        {
+            <li>@sale.EquipmentName rented on @sale.RentalDate for @sale.TotalCost</li>
+        }
+    </ul>
+}
+
+<!-- List Items by Category -->
+<h4>Items by Category</h4>
+<select @bind="selectedCategoryId">
+    @foreach (var category in categories)
+    {
+        <option value="@category.CategoryId">@category.Description</option>
+    }
+</select>
+<button @onclick="GenerateItemsByCategoryReport">Generate Report</button>
+
+@if (itemsByCategoryReport != null)
+{
+    <ul>
+        @foreach (var item in itemsByCategoryReport)
+        {
+            <li>@item.Name - @item.Description - @item.DailyRentalCost</li>
+        }
+    </ul>
+}
+
+@code {
+    private DateTime startDate;
+    private DateTime endDate;
+    private int selectedCustomerId;
+    private int selectedCategoryId;
+
+    private List<SaleReportItem> salesByDateReport = new List<SaleReportItem>(); // Initialize the field
+    private List<SaleReportItem> salesByCustomerReport = new List<SaleReportItem>(); // Initialize the field
+    private List<Equipment> itemsByCategoryReport = new List<Equipment>(); // Initialize the field
+
+    private List<Customer> customers = new List<Customer>();
+    private List<Category> categories = new List<Category>();
+
+    private DatabaseContext _dbContext;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _dbContext = new DatabaseContext(); // Initialize DatabaseContext
+
+            // Load customers and categories for dropdowns
+            customers = await LoadCustomersAsync();
+            categories = await LoadCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing Reports page: {ex.Message}");
+        }
+    }
+
+    private async Task GenerateSalesByDateReport()
+    {
+        try
+        {
+            salesByDateReport = await GenerateSalesByDateAsync(startDate, endDate);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating sales by date report: {ex.Message}");
+        }
+    }
+
+    private async Task GenerateSalesByCustomerReport()
+    {
+        try
+        {
+            salesByCustomerReport = await GenerateSalesByCustomerAsync(selectedCustomerId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating sales by customer report: {ex.Message}");
+        }
+    }
+
+    private async Task GenerateItemsByCategoryReport()
+    {
+        try
+        {
+            itemsByCategoryReport = await LoadItemsByCategoryAsync(selectedCategoryId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating items by category report: {ex.Message}");
+        }
+    }
+
+    private async Task<List<SaleReportItem>> GenerateSalesByDateAsync(DateTime startDate, DateTime endDate)
+    {
+        var rentals = await _dbContext.GetFileteredAsync<Rental>(r => r.RentalDate >= startDate && r.RentalDate <= endDate);
+        var salesReport = from rental in rentals
+                          join customer in customers on rental.CustomerId equals customer.CustomerId
+                          join equipment in itemsByCategoryReport on rental.EquipmentId equals equipment.EquipmentId
+                          select new SaleReportItem
+                          {
+                              CustomerName = customer.FirstName + " " + customer.LastName,
+                              EquipmentName = equipment.Name,
+                              RentalDate = rental.RentalDate,
+                              TotalCost = rental.RentalCost
+                          };
+
+        return salesReport.ToList();
+    }
+
+    private async Task<List<SaleReportItem>> GenerateSalesByCustomerAsync(int customerId)
+    {
+        var rentals = await _dbContext.GetFileteredAsync<Rental>(r => r.CustomerId == customerId);
+        var salesReport = from rental in rentals
+                          join equipment in itemsByCategoryReport on rental.EquipmentId equals equipment.EquipmentId
+                          select new SaleReportItem
+                          {
+                              CustomerName = customers.First(c => c.CustomerId == customerId).FirstName + " " + customers.First(c => c.CustomerId == customerId).LastName,
+                              EquipmentName = equipment.Name,
+                              RentalDate = rental.RentalDate,
+                              TotalCost = rental.RentalCost
+                          };
+
+        return salesReport.ToList();
+    }
+
+    private async Task<List<Equipment>> LoadItemsByCategoryAsync(int categoryId)
+    {
+        var equipmentList = await _dbContext.GetFileteredAsync<Equipment>(e => e.CategoryId == categoryId);
+        return equipmentList.ToList();
+    }
+
+    private async Task<List<Customer>> LoadCustomersAsync()
+    {
+        return (await _dbContext.GetAllAsync<Customer>()).ToList();
+    }
+
+    private async Task<List<Category>> LoadCategoriesAsync()
+    {
+        return (await _dbContext.GetAllAsync<Category>()).ToList();
+    }
+
+    private class SaleReportItem
+    {
+        public string CustomerName { get; set; } = string.Empty; // Initialize to avoid warnings
+        public string EquipmentName { get; set; } = string.Empty; // Initialize to avoid warnings
+        public DateTime RentalDate { get; set; }
+        public decimal TotalCost { get; set; }
+    }
+}
